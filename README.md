@@ -80,42 +80,63 @@ go build -o ~/.local/bin/figma-asset ./cmd/figma-asset
 
 直接运行 `export` 即可，daemon 会在需要时自动启动。日常不需要手动管理 daemon，只有在遇到端口占用或 daemon 卡死时才用 `stop` / `restart` 恢复。
 
+### 输出目录
+
+`--project-dir` 和 `--out-dir` 二选一，指定导出文件的写入位置：
+
+```bash
+# 传项目根目录，自动按平台惯例拼接子目录
+figma-asset export png --platform flutter --node 2005:709 --project-dir ~/my_app
+
+# 传具体目录，直接写入（跳过惯例拼接）
+figma-asset export png --platform flutter --node 2005:709 --out-dir ~/my_app/custom/icons
+```
+
+`--project-dir` 按平台自动拼接的子目录：
+
+| 平台 | 子目录 |
+|------|--------|
+| flutter | `assets/images/` |
+| android | `app/src/main/res/` |
+| ios | `Assets.xcassets/` |
+| web | `public/assets/` |
+
 ### PNG 导出
 
 ```bash
 figma-asset export png \
   --platform flutter \
   --node 2005:709 \
-  --out /path/to/flutter_package/assets/images \
+  --project-dir ~/my_flutter_app \
   --name im_group_notice_arrow_icon \
   --scales 1,2,3
 ```
 
 `--name` 和 `--scales` 可选。不传 `--name` 时使用 Figma 节点名，不传 `--scales` 时使用平台推荐倍率。
 
-各平台输出结构：
+各平台输出结构（以 `--project-dir ~/my_app` 为例）：
 
 ```text
 # flutter
-<out>/im_group_notice_arrow_icon.png
-<out>/2.0x/im_group_notice_arrow_icon.png
-<out>/3.0x/im_group_notice_arrow_icon.png
+~/my_app/assets/images/im_group_notice_arrow_icon.png
+~/my_app/assets/images/2.0x/im_group_notice_arrow_icon.png
+~/my_app/assets/images/3.0x/im_group_notice_arrow_icon.png
 
 # android (--scales 默认 1,1.5,2,3,4)
-<out>/drawable-mdpi/im_group_notice_arrow_icon.png
-<out>/drawable-hdpi/im_group_notice_arrow_icon.png
-<out>/drawable-xhdpi/im_group_notice_arrow_icon.png
-<out>/drawable-xxhdpi/im_group_notice_arrow_icon.png
-<out>/drawable-xxxhdpi/im_group_notice_arrow_icon.png
+~/my_app/app/src/main/res/drawable-mdpi/im_group_notice_arrow_icon.png
+~/my_app/app/src/main/res/drawable-hdpi/im_group_notice_arrow_icon.png
+~/my_app/app/src/main/res/drawable-xhdpi/im_group_notice_arrow_icon.png
+~/my_app/app/src/main/res/drawable-xxhdpi/im_group_notice_arrow_icon.png
+~/my_app/app/src/main/res/drawable-xxxhdpi/im_group_notice_arrow_icon.png
 
 # ios (--scales 默认 1,2,3)
-<out>/im_group_notice_arrow_icon.imageset/im_group_notice_arrow_icon.png
-<out>/im_group_notice_arrow_icon.imageset/im_group_notice_arrow_icon@2x.png
-<out>/im_group_notice_arrow_icon.imageset/im_group_notice_arrow_icon@3x.png
-<out>/im_group_notice_arrow_icon.imageset/Contents.json
+~/my_app/Assets.xcassets/im_group_notice_arrow_icon.imageset/im_group_notice_arrow_icon.png
+~/my_app/Assets.xcassets/im_group_notice_arrow_icon.imageset/im_group_notice_arrow_icon@2x.png
+~/my_app/Assets.xcassets/im_group_notice_arrow_icon.imageset/im_group_notice_arrow_icon@3x.png
+~/my_app/Assets.xcassets/im_group_notice_arrow_icon.imageset/Contents.json
 
 # web (--scales 默认 2)
-<out>/im_group_notice_arrow_icon@2x.png
+~/my_app/public/assets/im_group_notice_arrow_icon@2x.png
 ```
 
 ### SVG 导出
@@ -124,14 +145,14 @@ figma-asset export png \
 figma-asset export svg \
   --platform flutter \
   --node 2005:709 \
-  --out /path/to/flutter_package/assets/images \
+  --project-dir ~/my_flutter_app \
   --name im_group_notice_arrow_icon
 ```
 
-所有平台的 SVG 输出结构相同，直接写入 `<out>/name.svg`，不创建子目录：
+所有平台的 SVG 输出结构相同，直接写入 `<子目录>/name.svg`，不创建额外子目录：
 
 ```text
-<out>/im_group_notice_arrow_icon.svg
+~/my_app/assets/images/im_group_notice_arrow_icon.svg
 ```
 
 推荐使用"业务或模块命名空间 + 语义名称"的 snake_case 命名，避免 `icon.svg`、`bg.svg` 这类通用名称互相覆盖。
@@ -145,14 +166,14 @@ figma-asset export svg \
 figma-asset export png \
   --platform flutter \
   --node "257:2624,258:1001,259:307" \
-  --out ./assets
+  --project-dir ~/my_flutter_app
 
 # 多个节点，指定各自的文件名
 figma-asset export png \
   --platform flutter \
   --node "257:2624,258:1001,259:307" \
   --name "icon_home,icon_search,icon_back" \
-  --out ./assets
+  --project-dir ~/my_flutter_app
 ```
 
 批量导出时并发执行（最多 5 个节点同时），逐个打印进度：
@@ -177,15 +198,17 @@ figma-asset export svg \
   --platform flutter \
   --node "257:2624,258:1001" \
   --name "icon_home,icon_search" \
-  --out ./assets
+  --project-dir ~/my_flutter_app
 ```
 
 ## 命令参考
 
 ```bash
 # 日常使用
-figma-asset export png --platform <flutter|android|ios|web> --node <id[,id,...]> --out <dir> [--name <name[,name,...]>] [--scales <1,2,3>]
-figma-asset export svg --platform <flutter|android|ios|web> --node <id[,id,...]> --out <dir> [--name <name[,name,...]>] [svg-options]
+figma-asset export png --platform <flutter|android|ios|web> --node <id[,id,...]> --project-dir <dir> [--name <name[,name,...]>] [--scales <1,2,3>]
+figma-asset export png --platform <flutter|android|ios|web> --node <id[,id,...]> --out-dir <dir>    [--name <name[,name,...]>] [--scales <1,2,3>]
+figma-asset export svg --platform <flutter|android|ios|web> --node <id[,id,...]> --project-dir <dir> [--name <name[,name,...]>] [svg-options]
+figma-asset export svg --platform <flutter|android|ios|web> --node <id[,id,...]> --out-dir <dir>    [--name <name[,name,...]>] [svg-options]
 
 # 版本管理
 figma-asset version                        # 打印当前版本
@@ -244,7 +267,7 @@ figma-asset restart
 }
 ```
 
-`fileName` 可选（空则用节点名），`scales` 可选（空则用平台推荐倍率）。
+`fileName` 可选（空则用节点名），`scales` 可选（空则用平台推荐倍率）。`outDir` 是 CLI 解析后的最终路径（已拼接平台子目录）。
 
 daemon 发送给插件的 action：
 
@@ -279,7 +302,7 @@ daemon 发送给插件的 action：
 }
 ```
 
-插件返回 SVG bytes 后，daemon 写入 `<out>/name.svg`。
+插件返回 SVG bytes 后，daemon 写入 `<outDir>/name.svg`。
 
 ### 扩展原则
 
@@ -299,3 +322,7 @@ CLI command
 - plugin：只访问 Figma 设计稿和 Plugin API。
 
 不要在插件里加入平台业务规则，也不要让外部直接传任意 JS 给插件执行。
+
+## License
+
+[MIT](LICENSE)

@@ -103,7 +103,7 @@ echo "  3. Select: $PLUGIN_DIR/manifest.json"
 echo
 echo "  After import, run:"
 echo "    figma-asset start"
-echo "    figma-asset export png --platform flutter --node <node-id> --out ./assets"
+echo "    figma-asset export png --platform flutter --node <node-id> --project-dir ~/my_app"
 echo
 echo "  To check for updates:"
 echo "    figma-asset upgrade --check"

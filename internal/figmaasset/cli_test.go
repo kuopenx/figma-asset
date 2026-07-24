@@ -2,6 +2,7 @@ package figmaasset
 
 import (
 	"fmt"
+	"path/filepath"
 	"testing"
 )
 
@@ -145,42 +146,35 @@ func TestParseScalesNegative(t *testing.T) {
 // --- validateExportFlags ---
 
 func TestValidateExportFlagsAllPresent(t *testing.T) {
-	err := validateExportFlags("flutter", "2005:709", "./assets")
+	err := validateExportFlags("flutter", "2005:709")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
 
 func TestValidateExportFlagsMissingPlatform(t *testing.T) {
-	err := validateExportFlags("", "2005:709", "./assets")
+	err := validateExportFlags("", "2005:709")
 	if err == nil {
 		t.Fatal("expected error for missing platform")
 	}
 }
 
 func TestValidateExportFlagsMissingNode(t *testing.T) {
-	err := validateExportFlags("flutter", "", "./assets")
+	err := validateExportFlags("flutter", "")
 	if err == nil {
 		t.Fatal("expected error for missing node")
 	}
 }
 
-func TestValidateExportFlagsMissingOut(t *testing.T) {
-	err := validateExportFlags("flutter", "2005:709", "")
-	if err == nil {
-		t.Fatal("expected error for missing out")
-	}
-}
-
 func TestValidateExportFlagsInvalidPlatform(t *testing.T) {
-	err := validateExportFlags("react", "2005:709", "./assets")
+	err := validateExportFlags("react", "2005:709")
 	if err == nil {
 		t.Fatal("expected error for invalid platform")
 	}
 }
 
 func TestValidateExportFlagsAllMissing(t *testing.T) {
-	err := validateExportFlags("", "", "")
+	err := validateExportFlags("", "")
 	if err == nil {
 		t.Fatal("expected error for all flags missing")
 	}
@@ -433,5 +427,61 @@ func TestValidateExportSVGInvalidPlatform(t *testing.T) {
 	})
 	if err == nil {
 		t.Fatal("expected error for invalid platform")
+	}
+}
+
+// --- resolveOutputDir ---
+
+func TestResolveOutputDirProjectDir(t *testing.T) {
+	for _, tc := range []struct {
+		platform string
+		subDir   string
+	}{
+		{"flutter", "assets/images"},
+		{"android", "app/src/main/res"},
+		{"ios", "Assets.xcassets"},
+		{"web", "public/assets"},
+	} {
+		t.Run(tc.platform, func(t *testing.T) {
+			got, err := resolveOutputDir("/myproject", "", tc.platform)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			want := filepath.Join("/myproject", tc.subDir)
+			if got != want {
+				t.Fatalf("resolveOutputDir(%q) = %q, want %q", tc.platform, got, want)
+			}
+		})
+	}
+}
+
+func TestResolveOutputDirOutDir(t *testing.T) {
+	got, err := resolveOutputDir("", "/custom/icons", "flutter")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got != "/custom/icons" {
+		t.Fatalf("got %q, want /custom/icons", got)
+	}
+}
+
+func TestResolveOutputDirBothError(t *testing.T) {
+	_, err := resolveOutputDir("/myproject", "/custom", "flutter")
+	if err == nil {
+		t.Fatal("expected error when both project-dir and out-dir are set")
+	}
+}
+
+func TestResolveOutputDirNeitherError(t *testing.T) {
+	_, err := resolveOutputDir("", "", "flutter")
+	if err == nil {
+		t.Fatal("expected error when neither project-dir nor out-dir is set")
+	}
+}
+
+func TestResolveOutputDirInvalidPlatform(t *testing.T) {
+	_, err := resolveOutputDir("/myproject", "", "react")
+	if err == nil {
+		t.Fatal("expected error for invalid platform with project-dir")
 	}
 }

@@ -58,8 +58,10 @@ Usage:
   figma-asset start
   figma-asset status
   figma-asset restart
-  figma-asset export png  --platform <flutter|android|ios|web> --node <node-id> --out <dir> [--name <name>] [--scales <1,2,3>]
-  figma-asset export svg  --platform <flutter|android|ios|web> --node <node-id> --out <dir> [--name <name>] [svg-options]
+  figma-asset export png  --platform <flutter|android|ios|web> --node <node-id> --project-dir <dir> [--name <name>] [--scales <1,2,3>]
+  figma-asset export png  --platform <flutter|android|ios|web> --node <node-id> --out-dir <dir>    [--name <name>] [--scales <1,2,3>]
+  figma-asset export svg  --platform <flutter|android|ios|web> --node <node-id> --project-dir <dir> [--name <name>] [svg-options]
+  figma-asset export svg  --platform <flutter|android|ios|web> --node <node-id> --out-dir <dir>    [--name <name>] [svg-options]
   figma-asset version
   figma-asset plugin-path
   figma-asset upgrade [--check]
@@ -75,6 +77,11 @@ Commands:
   upgrade  Download and install the latest release. Use --check to only check.
   stop     Stop the local daemon.
 
+Output directory:
+  --project-dir  Project root; subdirectory is auto-appended per platform convention.
+  --out-dir      Specific directory; files are written directly there.
+  Only one of --project-dir / --out-dir may be used.
+
 Run "figma-asset export png --help" or "figma-asset export svg --help" for options.`)
 }
 
@@ -84,12 +91,19 @@ func printExportUsage() {
 	fmt.Println(`figma-asset export
 
 Usage:
-  figma-asset export png  --platform <flutter|android|ios|web> --node <node-id> --out <dir> [--name <name>] [--scales <1,2,3>]
-  figma-asset export svg  --platform <flutter|android|ios|web> --node <node-id> --out <dir> [--name <name>] [svg-options]
+  figma-asset export png  --platform <flutter|android|ios|web> --node <node-id> --project-dir <dir> [--name <name>] [--scales <1,2,3>]
+  figma-asset export png  --platform <flutter|android|ios|web> --node <node-id> --out-dir <dir>    [--name <name>] [--scales <1,2,3>]
+  figma-asset export svg  --platform <flutter|android|ios|web> --node <node-id> --project-dir <dir> [--name <name>] [svg-options]
+  figma-asset export svg  --platform <flutter|android|ios|web> --node <node-id> --out-dir <dir>    [--name <name>] [svg-options]
 
 Commands:
   png  Export one Figma node as PNG assets with platform-specific directory layout.
   svg  Export one Figma node as a single SVG file.
+
+Output directory:
+  --project-dir  Project root; subdirectory is auto-appended per platform convention.
+  --out-dir      Specific directory; files are written directly there.
+  Only one of --project-dir / --out-dir may be used.
 
 Run "figma-asset export png --help" or "figma-asset export svg --help" for options.`)
 }
@@ -98,12 +112,15 @@ func printExportPNGUsage() {
 	fmt.Println(`figma-asset export png
 
 Usage:
-  figma-asset export png --platform <flutter|android|ios|web> --node <node-id> --out <dir> [--name <name>] [--scales <1,2,3>]
+  figma-asset export png --platform <flutter|android|ios|web> --node <node-id> --project-dir <dir> [--name <name>] [--scales <1,2,3>]
+  figma-asset export png --platform <flutter|android|ios|web> --node <node-id> --out-dir <dir>    [--name <name>] [--scales <1,2,3>]
 
 Required:
-  --platform  Target platform: flutter, android, ios, or web.
-  --node      Figma node id, for example 2005:709. URL node-id=2005-709 maps to 2005:709.
-  --out       Output directory. Subdirectories are auto-created per platform convention.
+  --platform     Target platform: flutter, android, ios, or web.
+  --node         Figma node id, for example 2005:709. URL node-id=2005-709 maps to 2005:709.
+  --project-dir  Project root directory; subdirectory is auto-appended per platform convention.
+  --out-dir      Specific output directory; files are written directly there.
+  Only one of --project-dir / --out-dir may be used.
 
 Optional:
   --name      Output file name without extension. Defaults to the Figma node name.
@@ -113,17 +130,23 @@ Optional:
                 ios:     1,2,3
                 web:     2
 
-Platform output layout:
-  flutter  <out>/name.png, <out>/2.0x/name.png, <out>/3.0x/name.png
-  android  <out>/drawable-mdpi/name.png, <out>/drawable-hdpi/name.png, ...
-  ios      <out>/name.imageset/name.png, name@2x.png, name@3x.png, Contents.json
-  web      <out>/name@2x.png (flat, no subdirectories)
+Platform output layout (with --project-dir):
+  flutter  <project>/assets/images/name.png, 2.0x/name.png, 3.0x/name.png
+  android  <project>/app/src/main/res/drawable-mdpi/name.png, drawable-hdpi/name.png, ...
+  ios      <project>/Assets.xcassets/name.imageset/name.png, name@2x.png, name@3x.png, Contents.json
+  web      <project>/public/assets/name@2x.png
 
 Example:
   figma-asset export png \
     --platform flutter \
     --node 2005:709 \
-    --out ./assets/images \
+    --project-dir ~/my_flutter_app \
+    --name im_group_notice_arrow_icon
+
+  figma-asset export png \
+    --platform flutter \
+    --node 2005:709 \
+    --out-dir ./custom/icons \
     --name im_group_notice_arrow_icon`)
 }
 
@@ -131,12 +154,15 @@ func printExportSVGUsage() {
 	fmt.Println(`figma-asset export svg
 
 Usage:
-  figma-asset export svg --platform <flutter|android|ios|web> --node <node-id> --out <dir> [--name <name>] [svg-options]
+  figma-asset export svg --platform <flutter|android|ios|web> --node <node-id> --project-dir <dir> [--name <name>] [svg-options]
+  figma-asset export svg --platform <flutter|android|ios|web> --node <node-id> --out-dir <dir>    [--name <name>] [svg-options]
 
 Required:
-  --platform  Target platform: flutter, android, ios, or web.
-  --node      Figma node id, for example 2005:709.
-  --out       Output directory. SVG is written directly as <out>/name.svg (no subdirectories).
+  --platform     Target platform: flutter, android, ios, or web.
+  --node         Figma node id, for example 2005:709.
+  --project-dir  Project root directory; subdirectory is auto-appended per platform convention.
+  --out-dir      Specific output directory; SVG is written directly as <out-dir>/name.svg.
+  Only one of --project-dir / --out-dir may be used.
 
 Optional:
   --name            Output file name without extension. Defaults to the Figma node name.
@@ -148,7 +174,7 @@ Example:
   figma-asset export svg \
     --platform flutter \
     --node 2005:709 \
-    --out ./assets/images \
+    --project-dir ~/my_flutter_app \
     --name im_group_notice_arrow_icon`)
 }
 
@@ -176,7 +202,8 @@ func runExportPNG(args []string) error {
 	fs.Usage = printExportPNGUsage
 	platform := fs.String("platform", "", "target platform: flutter, android, ios, or web")
 	nodeID := fs.String("node", "", "Figma node id (comma-separated for batch)")
-	outDir := fs.String("out", "", "output directory")
+	projectDir := fs.String("project-dir", "", "project root directory (auto-appends platform subdirectory)")
+	outDirFlag := fs.String("out-dir", "", "specific output directory (writes directly)")
 	fileName := fs.String("name", "", "output file name (defaults to Figma node name; comma-separated for batch)")
 	scalesText := fs.String("scales", "", "comma-separated export scales (defaults to platform recommendation)")
 	if err := fs.Parse(args); err != nil {
@@ -186,7 +213,12 @@ func runExportPNG(args []string) error {
 		return err
 	}
 
-	if err := validateExportFlags(*platform, *nodeID, *outDir); err != nil {
+	absOut, err := resolveOutputDir(*projectDir, *outDirFlag, *platform)
+	if err != nil {
+		return err
+	}
+
+	if err := validateExportFlags(*platform, *nodeID); err != nil {
 		return err
 	}
 
@@ -212,11 +244,6 @@ func runExportPNG(args []string) error {
 		fmt.Println("Waiting for Figma plugin connection. Open Figma -> Plugins -> Development -> Figma Asset.")
 	}
 
-	absOut, err := filepath.Abs(*outDir)
-	if err != nil {
-		return err
-	}
-
 	return runExportBatch(nodeIDs, names, func(nodeID, name string) ([]string, error) {
 		request := ExportPNGRequest{
 			NodeID:   nodeID,
@@ -238,7 +265,8 @@ func runExportSVG(args []string) error {
 	fs.Usage = printExportSVGUsage
 	platform := fs.String("platform", "", "target platform: flutter, android, ios, or web")
 	nodeID := fs.String("node", "", "Figma node id (comma-separated for batch)")
-	outDir := fs.String("out", "", "output directory")
+	projectDir := fs.String("project-dir", "", "project root directory (auto-appends platform subdirectory)")
+	outDirFlag := fs.String("out-dir", "", "specific output directory (writes directly)")
 	fileName := fs.String("name", "", "output file name (defaults to Figma node name; comma-separated for batch)")
 	outlineText := fs.Bool("outline-text", true, "render text as vector outlines")
 	includeIds := fs.Bool("include-ids", false, "include layer names as id attributes")
@@ -250,7 +278,12 @@ func runExportSVG(args []string) error {
 		return err
 	}
 
-	if err := validateExportFlags(*platform, *nodeID, *outDir); err != nil {
+	absOut, err := resolveOutputDir(*projectDir, *outDirFlag, *platform)
+	if err != nil {
+		return err
+	}
+
+	if err := validateExportFlags(*platform, *nodeID); err != nil {
 		return err
 	}
 
@@ -266,11 +299,6 @@ func runExportSVG(args []string) error {
 	health, err := getHealth()
 	if err == nil && !health.PluginConnected {
 		fmt.Println("Waiting for Figma plugin connection. Open Figma -> Plugins -> Development -> Figma Asset.")
-	}
-
-	absOut, err := filepath.Abs(*outDir)
-	if err != nil {
-		return err
 	}
 
 	return runExportBatch(nodeIDs, names, func(nodeID, name string) ([]string, error) {
@@ -380,7 +408,24 @@ func runExportBatch(nodeIDs, names []string, fn batchExportFunc) error {
 	return nil
 }
 
-func validateExportFlags(platform string, nodeID string, outDir string) error {
+func resolveOutputDir(projectDir, outDir, platform string) (string, error) {
+	if projectDir != "" && outDir != "" {
+		return "", errors.New("--project-dir and --out-dir cannot be used together")
+	}
+	if projectDir == "" && outDir == "" {
+		return "", errors.New("--project-dir or --out-dir is required")
+	}
+	if projectDir != "" {
+		subDir, ok := platformSubDirs[platform]
+		if !ok {
+			return "", fmt.Errorf("unsupported platform: %s", platform)
+		}
+		return filepath.Abs(filepath.Join(projectDir, subDir))
+	}
+	return filepath.Abs(outDir)
+}
+
+func validateExportFlags(platform string, nodeID string) error {
 	var missing []string
 	if platform == "" {
 		missing = append(missing, "--platform is required: flutter, android, ios, or web")
@@ -390,13 +435,10 @@ func validateExportFlags(platform string, nodeID string, outDir string) error {
 	if nodeID == "" {
 		missing = append(missing, "--node is required: choose the Figma node to export, e.g. 2005:709")
 	}
-	if outDir == "" {
-		missing = append(missing, "--out is required: pass the output directory, e.g. ./assets/images")
-	}
 	if len(missing) == 0 {
 		return nil
 	}
-	return errors.New(strings.Join(missing, "\n") + "\n\nExample:\n  figma-asset export png --platform flutter --node 2005:709 --out ./assets/images\n  figma-asset export svg --platform flutter --node 2005:709 --out ./assets/images")
+	return errors.New(strings.Join(missing, "\n") + "\n\nExample:\n  figma-asset export png --platform flutter --node 2005:709 --project-dir ~/my_app\n  figma-asset export svg --platform flutter --node 2005:709 --out-dir ./custom/icons")
 }
 
 // --- start / status / restart / stop ---

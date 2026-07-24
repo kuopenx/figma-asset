@@ -33,6 +33,14 @@ func isValidPlatform(platform string) bool {
 	}
 }
 
+// platformSubDirs is the conventional asset subdirectory per platform.
+var platformSubDirs = map[string]string{
+	PlatformFlutter: "assets/images",
+	PlatformAndroid: "app/src/main/res",
+	PlatformIOS:     "Assets.xcassets",
+	PlatformWeb:     "public/assets",
+}
+
 // platformDefaultScales is the recommended export scales per platform.
 var platformDefaultScales = map[string][]float64{
 	PlatformFlutter: {1, 2, 3},
