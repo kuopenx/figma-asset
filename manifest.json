@@ -1,0 +1,14 @@
+{
+  "name": "Figma Asset",
+  "id": "figma-asset",
+  "api": "1.0.0",
+  "main": "plugin/code.js",
+  "ui": "plugin/ui.html",
+  "documentAccess": "dynamic-page",
+  "editorType": ["figma", "dev"],
+  "capabilities": ["inspect"],
+  "networkAccess": {
+    "allowedDomains": ["none"],
+    "devAllowedDomains": ["ws://localhost:3849", "http://localhost:3849"]
+  }
+}

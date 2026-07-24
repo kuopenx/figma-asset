@@ -1,0 +1,98 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      body {
+        margin: 0;
+        padding: 16px;
+        font-family: Inter, sans-serif;
+        color: #151622;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 14px;
+      }
+      p {
+        margin: 0 0 10px;
+        color: #666872;
+        font-size: 12px;
+        line-height: 18px;
+      }
+      code {
+        background: #f3f3f5;
+        border-radius: 4px;
+        padding: 2px 4px;
+      }
+      #status {
+        margin-top: 12px;
+        font-size: 12px;
+        line-height: 18px;
+        white-space: pre-wrap;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Figma Asset</h1>
+    <p>Keep this plugin open while figma-asset runs.</p>
+    <p>Bridge: <code id="bridge-url"></code></p>
+    <div id="status">Connecting...</div>
+    <script>
+      const bridgeUrl = 'ws://localhost:3849/plugin';
+      const statusNode = document.getElementById('status');
+      document.getElementById('bridge-url').textContent = bridgeUrl;
+      let socket = null;
+      let reconnectTimer = null;
+      const reconnectDelayMs = 2000;
+
+      function setStatus(text) {
+        statusNode.textContent = text;
+      }
+
+      function scheduleReconnect() {
+        if (reconnectTimer) {
+          clearTimeout(reconnectTimer);
+        }
+        reconnectTimer = setTimeout(connect, reconnectDelayMs);
+      }
+
+      function connect() {
+        socket = new WebSocket(bridgeUrl);
+        socket.onopen = () => {
+          setStatus('Connected. Waiting for task...');
+        };
+        socket.onclose = () => {
+          setStatus('Disconnected. Reconnecting in 2s...');
+          scheduleReconnect();
+        };
+        socket.onerror = () => {
+          setStatus('Waiting for local server...');
+        };
+        socket.onmessage = (event) => {
+          const message = JSON.parse(event.data);
+          if (message.action !== 'figma.exportNodePng' && message.action !== 'figma.exportNodeSvg') {
+            return;
+          }
+          setStatus(`Exporting task ${message.id}...`);
+          parent.postMessage({ pluginMessage: message }, '*');
+        };
+      }
+
+      window.onmessage = async (event) => {
+        const message = event.data.pluginMessage;
+        if (!message || !message.id) {
+          return;
+        }
+
+        if (socket && socket.readyState === WebSocket.OPEN) {
+          socket.send(JSON.stringify(message));
+          setStatus(`Finished task ${message.id}. Waiting for next task...`);
+        } else {
+          setStatus('Export finished but bridge is disconnected. Please retry.');
+        }
+      };
+
+      connect();
+    </script>
+  </body>
+</html>

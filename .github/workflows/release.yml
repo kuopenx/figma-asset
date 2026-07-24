@@ -1,0 +1,81 @@
+name: release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - goos: darwin
+            goarch: arm64
+          - goos: darwin
+            goarch: amd64
+          - goos: linux
+            goarch: amd64
+          - goos: windows
+            goarch: amd64
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Build binary
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          BINARY=figma-asset
+          if [ "$GOOS" = "windows" ]; then
+            BINARY=figma-asset.exe
+          fi
+          go build -ldflags "-X main.Version=${GITHUB_REF_NAME}" \
+            -o "build/$BINARY" ./cmd/figma-asset
+
+      - name: Package zip
+        run: |
+          cp manifest.json build/manifest.json
+          cp -r plugin build/plugin
+          cd build
+          zip -r "../figma-asset-${{ matrix.goos }}-${{ matrix.goarch }}.zip" \
+            figma-asset* manifest.json plugin/
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: figma-asset-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: figma-asset-${{ matrix.goos }}-${{ matrix.goarch }}.zip
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Generate checksums
+        run: |
+          cd artifacts
+          sha256sum *.zip > checksums.txt
+          cat checksums.txt
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            artifacts/*.zip
+            artifacts/checksums.txt
