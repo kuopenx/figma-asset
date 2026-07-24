@@ -19,17 +19,23 @@ $DownloadUrl = "https://github.com/$Owner/$Repo/releases/latest/download/$ZipNam
 $ChecksumsUrl = "https://github.com/$Owner/$Repo/releases/latest/download/checksums.txt"
 
 $TmpDir = New-Item -ItemType Directory -Force -Path (Join-Path $env:TEMP "figma-asset-install-$(Get-Random)")
+$TmpDirPath = $TmpDir.FullName
+
+function Cleanup-TmpDir {
+    if (Test-Path $TmpDirPath) { Remove-Item -Recurse -Force $TmpDirPath -ErrorAction SilentlyContinue }
+}
+trap { Cleanup-TmpDir; exit 1 }
 
 Write-Host "Detected platform: windows/$Arch"
 Write-Host "Downloading $ZipName..."
 
 # Download zip.
 $ZipPath = Join-Path $TmpDir.FullName $ZipName
-Invoke-WebRequest -Uri $DownloadUrl -OutFile $ZipPath
+Invoke-WebRequest -Uri $DownloadUrl -OutFile $ZipPath -UseBasicParsing
 
 # Download checksums and verify.
 $ChecksumsPath = Join-Path $TmpDir.FullName "checksums.txt"
-Invoke-WebRequest -Uri $ChecksumsUrl -OutFile $ChecksumsPath
+Invoke-WebRequest -Uri $ChecksumsUrl -OutFile $ChecksumsPath -UseBasicParsing
 
 $Expected = (Get-Content $ChecksumsPath | Where-Object { $_ -match $ZipName } | ForEach-Object { ($_.Trim() -split '\s+')[0] } | Select-Object -First 1)
 if (-not $Expected) {
@@ -85,7 +91,7 @@ if ($userPath -notlike "*$BinDir*") {
     Write-Host "-----------------------------------------"
     Write-Host "  Run this command to add to PATH:"
     Write-Host ""
-    Write-Host "    [Environment]::SetEnvironmentVariable('PATH', `$env:PATH + ';$BinDir', 'User')"
+    Write-Host "    [Environment]::SetEnvironmentVariable('PATH', [Environment]::GetEnvironmentVariable('PATH', 'User') + ';$BinDir', 'User')"
     Write-Host ""
     Write-Host "  Then restart your terminal."
     Write-Host ""
@@ -106,3 +112,5 @@ Write-Host "  To check for updates:"
 Write-Host "    figma-asset upgrade --check"
 Write-Host "  To update:"
 Write-Host "    figma-asset upgrade"
+
+Cleanup-TmpDir
