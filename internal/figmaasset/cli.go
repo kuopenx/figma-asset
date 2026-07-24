@@ -82,7 +82,10 @@ Output directory:
   --out-dir      Specific directory; files are written directly there.
   Only one of --project-dir / --out-dir may be used.
 
-Run "figma-asset export png --help" or "figma-asset export svg --help" for options.`)
+Examples:
+  figma-asset export png --platform flutter --node 2005:709 --name icon_home --project-dir ~/my_app
+  figma-asset export svg --platform flutter --node 2005:709 --name icon_home --project-dir ~/my_app
+  figma-asset export png --platform flutter --node "2005:709,257:2624" --name "icon_home,icon_search" --project-dir ~/my_app`)
 }
 
 // --- export ---
@@ -105,7 +108,10 @@ Output directory:
   --out-dir      Specific directory; files are written directly there.
   Only one of --project-dir / --out-dir may be used.
 
-Run "figma-asset export png --help" or "figma-asset export svg --help" for options.`)
+Examples:
+  figma-asset export png --platform flutter --node 2005:709 --name icon_home --project-dir ~/my_app
+  figma-asset export svg --platform flutter --node 2005:709 --name icon_home --project-dir ~/my_app
+  figma-asset export png --platform flutter --node "2005:709,257:2624" --name "icon_home,icon_search" --project-dir ~/my_app`)
 }
 
 func printExportPNGUsage() {
