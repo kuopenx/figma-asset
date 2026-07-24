@@ -118,12 +118,14 @@ Usage:
 Required:
   --platform     Target platform: flutter, android, ios, or web.
   --node         Figma node id, for example 2005:709. URL node-id=2005-709 maps to 2005:709.
+                 Comma-separated for batch export, e.g. "2005:709,257:2624".
   --project-dir  Project root directory; subdirectory is auto-appended per platform convention.
   --out-dir      Specific output directory; files are written directly there.
   Only one of --project-dir / --out-dir may be used.
 
 Optional:
   --name      Output file name without extension. Defaults to the Figma node name.
+              Comma-separated for batch export; count must match --node.
   --scales    Comma-separated export scales. Defaults to platform recommendation:
                 flutter: 1,2,3
                 android: 1,1.5,2,3,4
@@ -160,12 +162,14 @@ Usage:
 Required:
   --platform     Target platform: flutter, android, ios, or web.
   --node         Figma node id, for example 2005:709.
+                 Comma-separated for batch export, e.g. "2005:709,257:2624".
   --project-dir  Project root directory; subdirectory is auto-appended per platform convention.
   --out-dir      Specific output directory; SVG is written directly as <out-dir>/name.svg.
   Only one of --project-dir / --out-dir may be used.
 
 Optional:
   --name            Output file name without extension. Defaults to the Figma node name.
+                    Comma-separated for batch export; count must match --node.
   --outline-text    Render text as vector outlines. Default: true. Use --outline-text=false to keep <text> elements.
   --include-ids     Include layer names as id attributes in the SVG. Default: false.
   --simplify-stroke Simplify inside/outside stroke rendering. Default: true. Use --simplify-stroke=false for precision.
