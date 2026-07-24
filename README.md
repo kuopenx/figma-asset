@@ -1,8 +1,6 @@
 # figma-asset
 
-`figma-asset` 是一个通过本地 Figma 插件访问 Figma Plugin API 的 CLI 工具。支持从 Figma 节点导出 PNG 和 SVG 资产，写入 Flutter、Android、iOS、web 四种平台的目录结构。
-
-它解决的问题是：外部命令行环境不能直接调用 `node.exportAsync()`，必须让 Figma 插件在 Figma runtime 内执行导出，再把图片 bytes 交回本地进程写文件。
+`figma-asset` 是一个 CLI 工具，通过本地 Figma 插件从 Figma 设计稿导出 PNG 和 SVG 资产，并按 Flutter、Android、iOS、web 四种平台的目录结构写入本地文件。
 
 ## 架构
 
@@ -23,14 +21,14 @@ Figma plugin main -> node.exportAsync()
 ```
 
 - CLI：用户入口，按需启动 daemon，发送导出请求并打印结果。
-- daemon：本地常驻服务，维护插件 WebSocket 连接，转发任务，按平台规则写入文件；启动后会一直运行，直到执行 `figma-asset stop`。
+- daemon：本地常驻服务，维护插件 WebSocket 连接，转发任务，按平台规则写入文件。
 - Figma 插件：通用执行层，连接 daemon，调用 Figma Plugin API，返回 bytes + 节点名。
 
 ## 安装
 
-### macOS / Linux
+### 1. 安装 CLI
 
-无需安装 Go 环境，一行命令安装预编译二进制：
+#### macOS / Linux
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/kuopenx/figma-asset/main/install.sh | sh
@@ -53,7 +51,7 @@ curl -fsSL https://raw.githubusercontent.com/kuopenx/figma-asset/main/install.sh
 export PATH="$HOME/.local/bin:$PATH"
 ```
 
-### Windows
+#### Windows
 
 ```powershell
 irm https://raw.githubusercontent.com/kuopenx/figma-asset/main/install.ps1 | iex
@@ -61,21 +59,13 @@ irm https://raw.githubusercontent.com/kuopenx/figma-asset/main/install.ps1 | iex
 
 安装到 `%LOCALAPPDATA%\figma-asset\figma-asset.exe` 和 `%USERPROFILE%\figma-asset-plugin\`。
 
-### 从源码构建（开发者）
+#### 从源码构建（开发者）
 
 ```bash
 go build -o ~/.local/bin/figma-asset ./cmd/figma-asset
 ```
 
-## 版本与升级
-
-```bash
-figma-asset version           # 打印当前版本
-figma-asset upgrade --check   # 检查是否有新版本
-figma-asset upgrade           # 下载并安装最新版本，原地替换后自动重启 daemon
-```
-
-## 安装 Figma 插件
+### 2. 导入 Figma 插件
 
 安装 CLI 后，插件文件已经在 `~/figma-asset-plugin/` 目录下。
 
@@ -87,6 +77,8 @@ figma-asset upgrade           # 下载并安装最新版本，原地替换后自
 插件窗口显示 `Connected. Waiting for task...` 时，说明已经连上本地 daemon。
 
 ## 使用 CLI 导出资产
+
+直接运行 `export` 即可，daemon 会在需要时自动启动。日常不需要手动管理 daemon，只有在遇到端口占用或 daemon 卡死时才用 `stop` / `restart` 恢复。
 
 ### PNG 导出
 
@@ -188,76 +180,43 @@ figma-asset export svg \
   --out ./assets
 ```
 
-## 命令
+## 命令参考
 
 ```bash
-figma-asset start
-```
+# 日常使用
+figma-asset export png --platform <flutter|android|ios|web> --node <id[,id,...]> --out <dir> [--name <name[,name,...]>] [--scales <1,2,3>]
+figma-asset export svg --platform <flutter|android|ios|web> --node <id[,id,...]> --out <dir> [--name <name[,name,...]>] [svg-options]
 
-启动 daemon 并保持常驻。打开 Figma 插件后可以先执行这个命令，让插件提前连接。
+# 版本管理
+figma-asset version                        # 打印当前版本
+figma-asset upgrade --check                # 检查是否有新版本
+figma-asset upgrade                        # 下载并安装最新版本，原地替换后自动重启 daemon
+figma-asset plugin-path                    # 打印插件 manifest.json 路径
 
-```bash
-figma-asset status
-```
-
-查看 daemon 是否运行、监听地址和插件是否连接。示例：
-
-```text
-name: figma-asset
-listen: http://127.0.0.1:3849
-plugin: connected
-pendingTasks: 0
-```
-
-```bash
-figma-asset restart
-```
-
-重启 daemon；如果 daemon 没有运行，则等价于 `start`。
-
-```bash
-figma-asset export png --platform <flutter|android|ios|web> --node <node-id[,node-id,...]> --out <dir> [--name <name[,name,...]>] [--scales <1,2,3>]
-figma-asset export svg --platform <flutter|android|ios|web> --node <node-id[,node-id,...]> --out <dir> [--name <name[,name,...]>] [svg-options]
-```
-
-`--node` 和 `--name` 支持逗号分隔实现批量导出。如果 daemon 没运行会先自动启动。随后等待插件连接，导出资产并按平台规则写入目录。
-
-```bash
-figma-asset version              # 打印当前版本
-figma-asset upgrade [--check]    # 检查或安装最新版本
-figma-asset plugin-path          # 打印插件 manifest.json 路径，用于 Figma 导入
-figma-asset stop                 # 停止 daemon
+# daemon 维护（仅在遇到问题时使用）
+figma-asset start                          # 启动 daemon 并保持常驻
+figma-asset stop                           # 停止 daemon
+figma-asset restart                        # 重启 daemon（没运行则等价于 start）
+figma-asset status                         # 查看 daemon 和插件连接状态
 ```
 
 `figma-asset daemon` 是内部命令，由 CLI 自动拉起，日常不需要手动执行。
 
-## 连接模型
+## 故障恢复
 
-Figma 插件不能主动启动本机进程，所以只打开插件时，如果 daemon 还没运行，插件会显示：
+Figma 插件不能主动启动本机进程，所以只打开插件时如果 daemon 还没运行，插件会显示：
 
 ```text
 Disconnected. Reconnecting in 2s...
 ```
 
-这是等待本地 daemon 的状态。执行任意会启动 daemon 的命令后，插件会在下一轮重连时变成 connected：
+执行任意命令即可让 daemon 启动，插件会在下一轮自动重连。
 
 ```bash
-figma-asset start
-```
-
-daemon 一旦启动会常驻复用，除非手动执行：
-
-```bash
-figma-asset stop
-```
-
-## 故障恢复
-
-```bash
-figma-asset stop              # 停止 daemon
-figma-asset restart            # 重启 daemon
-cat ~/figma-asset-plugin/daemon.log    # 查看日志
-lsof -i :3849                 # 检查端口占用
+figma-asset stop                          # 停止 daemon
+figma-asset restart                       # 重启 daemon
+cat ~/figma-asset-plugin/daemon.log       # 查看日志
+lsof -i :3849                             # 检查端口占用
 ```
 
 如果升级失败或二进制损坏，重新安装：
@@ -267,9 +226,11 @@ curl -fsSL https://raw.githubusercontent.com/kuopenx/figma-asset/main/install.sh
 figma-asset restart
 ```
 
-## HTTP 接口
+## 开发者文档
 
-### `POST /v1/export/png`
+### HTTP 接口
+
+#### `POST /v1/export/png`
 
 请求：
 
@@ -302,7 +263,7 @@ daemon 发送给插件的 action：
 
 插件返回 bytes + nodeName 后，由 daemon 按平台规则写入文件。插件不关心平台目录、命名规则或磁盘写入。
 
-### `POST /v1/export/svg`
+#### `POST /v1/export/svg`
 
 请求：
 
@@ -320,7 +281,7 @@ daemon 发送给插件的 action：
 
 插件返回 SVG bytes 后，daemon 写入 `<out>/name.svg`。
 
-## 扩展原则
+### 扩展原则
 
 新增能力时沿用这个模板：
 
